@@ -12,12 +12,16 @@ type DBHelper struct {
     db *sql.DB
 }
 
-func NewHelper (path string) (*DBHelper) {
+func NewHelper(path string) (*DBHelper) {
     var err error
     helper := new(DBHelper)
     helper.db, err = OpenDB(path)
     checkErr(err)
     return helper
+}
+
+func (self *DBHelper) GetDB() (*sql.DB) {
+    return self.db
 }
 
 func (self *DBHelper) InitTable(name string, args []string) (res sql.Result,
