@@ -1,4 +1,4 @@
-package handlers
+package goserver
 
 import (
     "fmt"
@@ -84,7 +84,6 @@ func AddHandler(path string, handler func(http.ResponseWriter,
         InitHandler(listenPath)
     }
     
-    fmt.Println(pathRegex);
     fmt.Println("Adding handler on '" + listenPath + "'...")
     
     handlers[listenPath] = append(handlers[listenPath],
