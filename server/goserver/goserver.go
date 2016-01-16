@@ -29,38 +29,16 @@ func (slice Handlers) Swap(i, j int) {
     slice[i], slice[j] = slice[j], slice[i]
 }
 
-var handlers = make(map[string]Handlers)
+var handlers = Handlers{}
 
-var pathStart = regexp.MustCompile("^(.+?)(?:(?:/|).*?\\$|$)")
 var escapeChars = regexp.MustCompile("(\\|\\+|\\-|\\?|\\&)")
 
-func ExtractPathData(path string) (*regexp.Regexp, string) {
-    var (
-        pathRegex = regexp.MustCompile("^" +
-            strings.Replace(escapeChars.ReplaceAllString(path, "\\$1"), "$",
+func GetPathRegex(path string) (*regexp.Regexp) {
+    var pathRegex = regexp.MustCompile("^" +
+        strings.Replace(escapeChars.ReplaceAllString(path, "\\$1"), "$",
             "(.+?)", -1) + "$")
-        listenMatch = pathStart.FindStringSubmatch(path)
-        listenPath = "/"
-    )
     
-    if listenMatch != nil {
-        listenPath = listenMatch[1]
-    }
-    
-    if listenPath[len(listenPath) - 1:len(listenPath)] != "/" {
-        listenPath += "/"
-    }
-    
-    return pathRegex, listenPath
-}
-
-func CheckPath(path string) (bool) {
-    _, exists := handlers[path]
-    if !exists {
-        handlers[path] = Handlers{}
-    }
-    
-    return exists
+    return pathRegex
 }
 
 func CallHandler(handler Handler, res http.ResponseWriter,
@@ -77,40 +55,32 @@ func CallHandler(handler Handler, res http.ResponseWriter,
     return true
 }
 
-func InitHandler(listenPath string) {
-    http.HandleFunc(listenPath, func(res http.ResponseWriter,
-        req *http.Request) {
-        fmt.Println("Handling request on '" + listenPath + "'...")
-        for _, handler := range handlers[listenPath] {
-            if CallHandler(handler, res, req) {
-                fmt.Println("Handled request with '" + handler.path + "' handler")
-                return
-            }
-        }
-    })
-}
-
 func AddHandler(path string, handler func(http.ResponseWriter,
     *http.Request, []string)) {
     
-    pathRegex, listenPath := ExtractPathData(path)
+    pathRegex := GetPathRegex(path)
     
-    exists := CheckPath(listenPath)
+    fmt.Println("Adding handler on '" + path + "'...")
     
-    if !exists {
-        InitHandler(listenPath)
-    }
-    
-    fmt.Println("Adding handler on '" + listenPath + "'...")
-    
-    handlers[listenPath] = append(handlers[listenPath],
+    handlers = append(handlers,
         Handler{pathRegex: pathRegex, handler: handler, path: path})
     
-    sort.Sort(handlers[listenPath])    
+    sort.Sort(handlers)    
+}
+
+func handleReq(res http.ResponseWriter,
+    req *http.Request) {
+    for _, handler := range handlers {
+        if CallHandler(handler, res, req) {
+            fmt.Println("Handled request with '" + handler.path + "' handler")
+            return
+        }
+    }
 }
 
 func Start(port int) {
     var strPort = strconv.Itoa(port)
     fmt.Println("Starting server on port " + strPort + "...")
+    http.HandleFunc("/", handleReq)
     http.ListenAndServe(":" + strPort, nil)
 }
