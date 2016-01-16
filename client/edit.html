@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Hello, Go!</title>
+    </head>
+    <body>
+        <p>This file was also brought to you by Go.</p>
+        <h1>Editing {{.Title}}</h1>
+        
+        <form action="/api/blog/Me/post/1/edit" method="POST">
+            <div><textarea name="body" rows="20" cols="80"></textarea></div>
+            <div><input type="submit" value="Save"></div>
+        </form>
+    </body>
+</html>
