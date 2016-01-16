@@ -1,13 +1,19 @@
 package bloghandler
 
 import (
-    // "fmt"
-    // "time"
+    "fmt"
+    "time"
     "database/sql"
     "encoding/json"
     "../dbhelper"
     "../goserver"
     "net/http"
+)
+
+var (
+    createPost = "INSERT INTO Posts (html, title, author, timestamp) VALUES ($1, $2, $3, $4)"
+    editPost = "UPDATE Posts SET html=$3 WHERE uid=$2 AND author=$1"
+    getPost = "SELECT * FROM Posts WHERE uid=$2 AND author=$1"
 )
 
 type PostData struct {
@@ -20,8 +26,6 @@ type PostData struct {
 
 var (
     blogHelper = dbhelper.NewHelper("./db/blog.db")
-    blogDb = blogHelper.GetDB()
-    getPost, _ = blogDb.Prepare("SELECT * FROM Posts WHERE author=? AND uid=?")
 )
 
 func scanPost(rows *sql.Rows) (PostData) {
@@ -33,14 +37,18 @@ func scanPost(rows *sql.Rows) (PostData) {
     return post
 }
 
-func handleReq(res http.ResponseWriter, req *http.Request, args []string) {
+func readPostData(res http.ResponseWriter, req *http.Request, args []string) {
     if (len(args) < 2) {
         return
     }
     
-    postResults, _ := getPost.Query(args[0], args[1])
+    db, _ := blogHelper.OpenDB()
+    
+    postResults, _ := db.Query(getPost, args[0], args[1])
     
     post := scanPost(postResults)
+    
+    postResults.Close()
     
     js, err := json.Marshal(post)
     if err != nil {
@@ -50,10 +58,33 @@ func handleReq(res http.ResponseWriter, req *http.Request, args []string) {
     
     res.Header().Set("Content-Type", "application/json")
     res.Write(js)
+    
+    defer blogHelper.CloseDB(db)
+}
+
+func writePostData(res http.ResponseWriter, req *http.Request, args []string) {
+    if req.Method != "POST" {
+        return
+    }
+    if len(args) == 1 {
+        db, _ := blogHelper.OpenDB()
+        db.Exec(createPost, req.Body, "About Bob", "Bob", time.Now().Unix())
+        defer blogHelper.CloseDB(db)
+    } else if len(args) == 2 {
+        req.ParseForm()
+        fmt.Println(req.Form)
+        db, _ := blogHelper.OpenDB()
+        db.Exec(editPost, args[0], args[1], "Joe")
+        defer blogHelper.CloseDB(db)
+    }
 }
 
 // TODO (Joshua Gammage): Make some kind of "handler" interface so we can
 // always have Register
 func Register() {
-    goserver.AddHandler("/blog/$/post/$", handleReq)
+    blogHelper.InitTable("Posts", []string{"uid INTEGER PRIMARY KEY",
+         "html TEXT", "title TEXT", "author TEXT", "timestamp INTEGER"})
+    goserver.AddHandler("/api/blog/$/post/$", readPostData)
+    goserver.AddHandler("/api/blog/$/post/write", writePostData)
+    goserver.AddHandler("/api/blog/$/post/$/edit", writePostData)
 }

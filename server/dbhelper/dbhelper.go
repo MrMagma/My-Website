@@ -1,39 +1,47 @@
 package dbhelper
 
 import (
-    // "fmt"
-    // "time"
+    "fmt"
     "database/sql"
     "strings"
     _ "github.com/mattn/go-sqlite3"
 )
 
 type DBHelper struct {
-    db *sql.DB
+    path string
+    open bool
 }
 
 func NewHelper(path string) (*DBHelper) {
-    var err error
     helper := new(DBHelper)
-    helper.db, err = OpenDB(path)
-    checkErr(err)
+    helper.path = path
+    helper.open = false
     return helper
 }
 
-func (self *DBHelper) GetDB() (*sql.DB) {
-    return self.db
-}
-
-func (self *DBHelper) InitTable(name string, args []string) (res sql.Result,
-    err error) {
-    res, err = self.db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" +
+func (self *DBHelper) InitTable(name string, args []string) (sql.Result,
+    error) {
+    db, _ := self.OpenDB()
+    res, err := db.Exec("CREATE TABLE IF NOT EXISTS " + name + " (" +
         strings.Join(args[:], ", ") + ")")
+    checkErr(err)
+    self.CloseDB(db)
     return res, err
 }
 
-func OpenDB(path string) (db *sql.DB, err error) {
-    db, err = sql.Open("sqlite3", path)
+func (self *DBHelper) OpenDB() (*sql.DB, error) {
+    if (self.open) {
+        fmt.Println("DB already open!")
+    }
+    self.open = true
+    db, err := sql.Open("sqlite3", self.path)
+    checkErr(err)
     return db, err
+}
+
+func (self *DBHelper) CloseDB(db *sql.DB) {
+    db.Close()
+    self.open = false
 }
 
 func checkErr(err error) {

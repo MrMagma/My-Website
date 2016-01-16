@@ -6,16 +6,32 @@ import (
     "regexp"
     "strings"
     "strconv"
+    "sort"
 )
 
 type Handler struct {
+    path string
     pathRegex *regexp.Regexp
     handler func(http.ResponseWriter, *http.Request, []string)
 }
 
-var handlers = make(map[string][]Handler)
+type Handlers []Handler
 
-var pathStart = regexp.MustCompile("^(.+?)(?:/.*?\\$|$)")
+func (slice Handlers) Len() int {
+    return len(slice)
+}
+
+func (slice Handlers) Less(i, j int) bool {
+    return len(slice[i].path) > len(slice[j].path)
+}
+
+func (slice Handlers) Swap(i, j int) {
+    slice[i], slice[j] = slice[j], slice[i]
+}
+
+var handlers = make(map[string]Handlers)
+
+var pathStart = regexp.MustCompile("^(.+?)(?:(?:/|).*?\\$|$)")
 var escapeChars = regexp.MustCompile("(\\|\\+|\\-|\\?|\\&)")
 
 func ExtractPathData(path string) (*regexp.Regexp, string) {
@@ -28,7 +44,7 @@ func ExtractPathData(path string) (*regexp.Regexp, string) {
     )
     
     if listenMatch != nil {
-        listenPath = listenMatch[1] + "/"
+        listenPath = listenMatch[1]
     }
     
     if listenPath[len(listenPath) - 1:len(listenPath)] != "/" {
@@ -41,7 +57,7 @@ func ExtractPathData(path string) (*regexp.Regexp, string) {
 func CheckPath(path string) (bool) {
     _, exists := handlers[path]
     if !exists {
-        handlers[path] = []Handler{}
+        handlers[path] = Handlers{}
     }
     
     return exists
@@ -67,6 +83,7 @@ func InitHandler(listenPath string) {
         fmt.Println("Handling request on '" + listenPath + "'...")
         for _, handler := range handlers[listenPath] {
             if CallHandler(handler, res, req) {
+                fmt.Println("Handled request with '" + handler.path + "' handler")
                 return
             }
         }
@@ -87,11 +104,12 @@ func AddHandler(path string, handler func(http.ResponseWriter,
     fmt.Println("Adding handler on '" + listenPath + "'...")
     
     handlers[listenPath] = append(handlers[listenPath],
-        Handler{pathRegex: pathRegex, handler: handler})
+        Handler{pathRegex: pathRegex, handler: handler, path: path})
     
+    sort.Sort(handlers[listenPath])    
 }
 
-func StartServer(port int) {
+func Start(port int) {
     var strPort = strconv.Itoa(port)
     fmt.Println("Starting server on port " + strPort + "...")
     http.ListenAndServe(":" + strPort, nil)
