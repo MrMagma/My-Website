@@ -17,6 +17,5 @@ func handleReq(res http.ResponseWriter, req *http.Request, args []string) {
 }
 
 func Register() {
-    goserver.AddHandler(listenPath, handleReq)
     goserver.AddHandler(listenPath + "$", handleReq)
 }

@@ -36,7 +36,7 @@ var escapeChars = regexp.MustCompile("(\\|\\+|\\-|\\?|\\&)")
 func GetPathRegex(path string) (*regexp.Regexp) {
     var pathRegex = regexp.MustCompile("^" +
         strings.Replace(escapeChars.ReplaceAllString(path, "\\$1"), "$",
-            "(.+?)", -1) + "$")
+            "(.*?)", -1) + "$")
     
     return pathRegex
 }
