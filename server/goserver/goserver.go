@@ -7,6 +7,7 @@ import (
     "strings"
     "strconv"
     "sort"
+    "../servercfg"
 )
 
 type Handler struct {
@@ -14,6 +15,10 @@ type Handler struct {
     pathRegex *regexp.Regexp
     handler func(http.ResponseWriter, *http.Request, []string)
 }
+
+var (
+    Config = servercfg.Load("server.json")
+)
 
 type Handlers []Handler
 
@@ -82,5 +87,5 @@ func Start(port int) {
     var strPort = strconv.Itoa(port)
     fmt.Println("Starting server on port " + strPort + "...")
     http.HandleFunc("/", handleReq)
-    http.ListenAndServe(":" + strPort, nil)
+    http.ListenAndServe(":" + Config.Port, nil)
 }

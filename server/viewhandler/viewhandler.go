@@ -10,13 +10,10 @@ import (
     "fmt"
 )
 
-var (
-    clientDir = "client"
-    listenPath = "/"
-)
+var listenPath = "/"
 
 func serve404(res http.ResponseWriter, req *http.Request) {
-    resBytes, err := fetchFile(path.Join(clientDir, "404.html"))
+    resBytes, err := fetchFile(goserver.Config.Error404)
     if err != nil {
         res.Write([]byte("404: File not found"))
     }
@@ -26,9 +23,10 @@ func serve404(res http.ResponseWriter, req *http.Request) {
 func fetchFile(resPath string) ([]byte, error) {
     file, err := os.Open(resPath)
     if err != nil {
+    file.Close()
         // If there was no extension then try one last time with an extension
         if len(path.Ext(resPath)) == 0 {
-            return fetchFile(resPath + ".html")
+            return fetchFile(resPath + goserver.Config.DefaultExt)
         }
         return nil, err
     }
@@ -64,7 +62,8 @@ func fetchFile(resPath string) ([]byte, error) {
 }
 
 func serveClient(res http.ResponseWriter, req *http.Request, args []string) {
-    resPath := path.Join("client", req.URL.Path[len(listenPath):])
+    resPath := path.Join(goserver.Config.ClientPath,
+        req.URL.Path[len(listenPath):])
     
     resBytes, err := fetchFile(resPath)
     if err != nil {

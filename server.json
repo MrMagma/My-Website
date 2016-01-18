@@ -1,0 +1,6 @@
+{
+    "clientPath": "client",
+    "error404": "404.html",
+    "defaultExt": ".html",
+    "port": "8080"
+}
